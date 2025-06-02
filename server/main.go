@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"net"
+
+	protocol "github.com/SashaT9/chat-app/pkg"
 )
 
 func main() {
@@ -25,9 +27,26 @@ func main() {
 					fmt.Println("closed ", err)
 					return
 				}
-				response := "echo: " + string(buffer[:n])
-				fmt.Println("Received:", response)
-				c.Write([]byte(response))
+				received := string(buffer[:n])
+				fmt.Println("Received:", received)
+				env, err := protocol.Unmarshal(buffer[:n])
+				if err != nil {
+					fmt.Println("Error unmarshalling:", err)
+					continue
+				}
+				fmt.Println("Envelope Type:", env.Type)
+				responseBytes, err := protocol.RegionCount(42)
+				if err != nil {
+					fmt.Println("Error marshalling response:", err)
+					continue
+				}
+				responseBytes = append(responseBytes, '\n')
+				_, err = c.Write(responseBytes)
+				if err != nil {
+					fmt.Println("Error writing response:", err)
+					return
+				}
+				fmt.Println("Sent response:", string(responseBytes))
 			}
 		}(conn)
 	}

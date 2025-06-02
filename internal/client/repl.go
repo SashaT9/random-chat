@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+
+	protocol "github.com/SashaT9/chat-app/pkg"
 )
 
 func Repl() {
@@ -25,6 +27,14 @@ func Repl() {
 		if text == "\\exit\n" {
 			fmt.Println("Connection closed.")
 			return
+		}
+		if text == "\\regions\n" {
+			responseBytes, err := protocol.RegionRequest(text[1:])
+			if err != nil {
+				fmt.Println("Error requesting regions:", err)
+				continue
+			}
+			text = string(responseBytes)
 		}
 		conn.WriteMessage(text)
 		response, err := conn.ReadMessage()
