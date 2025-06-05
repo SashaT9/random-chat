@@ -1,17 +1,11 @@
+/*
+Copyright © 2025 NAME HERE <EMAIL ADDRESS>
+
+*/
 package main
 
-import (
-	"fmt"
-	"os"
-
-	"github.com/SashaT9/chat-app/internal/client"
-)
+import "github.com/SashaT9/random-chat/cmd"
 
 func main() {
-	if len(os.Args) == 1 {
-		client.Repl()
-		return
-	} else {
-		fmt.Print("todo")
-	}
+	cmd.Execute()
 }
