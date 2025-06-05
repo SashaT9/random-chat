@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/SashaT9/random-chat/pkg/client"
+	"github.com/SashaT9/random-chat/internal"
 	"github.com/spf13/cobra"
 )
 
@@ -30,12 +30,17 @@ to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	RunE: func(cmd *cobra.Command, args []string) error {
-		client, err := client.NewClient(username, ip, port)
+		client, err := internal.NewClient(username, ip, port)
 		if err != nil {
-			fmt.Printf("%v\n", err)
-			return err
+			fmt.Printf("Error connecting to server: %v\n", err)
 		}
-		client.ReadLoop()
+		go client.Read()
+		for {
+			if err := client.Send(); err != nil {
+				fmt.Printf("Error sending message: %v\n", err)
+				break
+			}
+		}
 		return nil
 	},
 }
