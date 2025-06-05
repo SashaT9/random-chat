@@ -14,7 +14,7 @@ type Client struct {
 }
 
 func NewClient(username string, ip string, port int) (*Client, error) {
-	addr := net.JoinHostPort(ip, string(rune(port)))
+	addr := net.JoinHostPort(ip, fmt.Sprintf("%d", port))
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -42,6 +42,8 @@ func (c *Client) SendMessage(data string) error {
 }
 
 func (c *Client) ReadLoop() {
+	for {
+	}
 	scanner := bufio.NewScanner(c.conn)
 	for scanner.Scan() {
 		raw := scanner.Text()
@@ -55,7 +57,6 @@ func (c *Client) ReadLoop() {
 			fmt.Printf("You are matched with: %s\n", msg.PayLoad)
 		case protocol.Unmatched:
 			fmt.Printf("you are unmatched with: %s\n", msg.PayLoad)
-			return
 		}
 	}
 }
