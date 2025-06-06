@@ -32,7 +32,7 @@ to quickly create a Cobra application.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		client, err := internal.NewClient(username, ip, port)
 		if err != nil {
-			fmt.Printf("Error connecting to server: %v\n", err)
+			return err
 		}
 		go client.Read()
 		for {
@@ -57,7 +57,7 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&username, "username", "u", "Guest", "Your username")
 	rootCmd.PersistentFlags().StringVar(&ip, "ip", "0.0.0.0", "IP address to connect to")
-	rootCmd.PersistentFlags().IntVar(&port, "port", 9000, "Port to connect to")
+	rootCmd.PersistentFlags().IntVar(&port, "port", 89898, "Port to connect to")
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.

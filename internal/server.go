@@ -2,11 +2,15 @@ package internal
 
 import (
 	"bufio"
+	"log"
 	"net"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/fatih/color"
 )
 
 type Server struct {
@@ -16,20 +20,23 @@ type Server struct {
 	Port int
 }
 
-func Run(ip string, port int) (*Server, error) {
+func Run(ip string, port int) error {
+	log.Printf("Starting server on %s:%d\n", ip, port)
 	server := &Server{IP: ip, Port: port}
 	listener, err := net.Listen("tcp", net.JoinHostPort(ip, strconv.Itoa(port)))
 	if err != nil {
-		return nil, err
+		log.Printf("Error starting server: %v\n", err)
+		return err
 	}
 	server.Receive(listener)
-	return server, nil
+	return nil
 }
 
 func (s *Server) Receive(listener net.Listener) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
+			log.Printf("Error accepting connection: %v\n", err)
 			continue
 		}
 		r := bufio.NewReader(conn)
@@ -60,9 +67,15 @@ func (s *Server) HandleRead(client *Client, r *bufio.Reader) {
 		}
 		msg = strings.TrimSpace(msg)
 		if client.Partner != nil {
-			client.Partner.Inbox <- client.Username + ": " + msg + "\n"
+			client.Partner.Inbox <- color.BlueString("%s: ", client.Username) + msg + "\n"
 		} else {
-			client.Inbox <- "No partner connected.\n"
+			go func() {
+				client.Inbox <- color.RedString("Waiting for a partner...") + "\n"
+				for client.Partner == nil {
+					time.Sleep(10 * time.Millisecond)
+				}
+				client.Partner.Inbox <- color.BlueString("%s: ", client.Username) + msg + "\n"
+			}()
 		}
 	}
 }
@@ -78,20 +91,16 @@ func (s *Server) HandleWrite(client *Client) {
 func (s *Server) addClient(client *Client) {
 	s.Mtx.Lock()
 	defer s.Mtx.Unlock()
-	if len(s.Pool) == 0 {
-		s.Pool = append(s.Pool, client)
-	} else {
-		partner := s.Pool[0]
-		partner.Partner = client
-		client.Partner = partner
-		s.Pool = s.Pool[1:]
-	}
+	s.Pool = append(s.Pool, client)
+	s.updatePool()
+	log.Printf("Client %s connected\n", client.Username)
 }
 
 func (s *Server) removeClient(client *Client) {
 	s.Mtx.Lock()
 	defer s.Mtx.Unlock()
 	if client.Partner != nil {
+		client.Partner.Inbox <- color.RedString("Your partner %s disconnected.", client.Username) + "\n"
 		client.Partner.Partner = nil
 		s.Pool = append(s.Pool, client.Partner)
 		client.Partner = nil
@@ -101,5 +110,19 @@ func (s *Server) removeClient(client *Client) {
 			s.Pool = slices.Delete(s.Pool, i, i+1)
 			break
 		}
+	}
+	s.updatePool()
+	log.Printf("Client %s disconnected\n", client.Username)
+}
+
+func (s *Server) updatePool() {
+	for len(s.Pool) > 1 {
+		client1 := s.Pool[0]
+		client2 := s.Pool[1]
+		client1.Inbox <- color.CyanString("Connected to: ") + client2.Username + "\n"
+		client2.Inbox <- color.CyanString("Connected to: ") + client1.Username + "\n"
+		client1.Partner = client2
+		client2.Partner = client1
+		s.Pool = s.Pool[2:]
 	}
 }
