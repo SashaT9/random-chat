@@ -2,10 +2,14 @@ package internal
 
 import (
 	"bufio"
+	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/fatih/color"
 )
 
 type Client struct {
@@ -18,6 +22,7 @@ type Client struct {
 func NewClient(username, ip string, port int) (*Client, error) {
 	conn, err := net.Dial("tcp", net.JoinHostPort(ip, strconv.Itoa(port)))
 	if err != nil {
+		log.Printf("%s", color.RedString("Error connecting to server: %v\n", err))
 		return nil, err
 	}
 	conn.Write([]byte(username + "\n"))
@@ -39,22 +44,26 @@ func (c *Client) Listen() {
 			close(c.Inbox)
 			return
 		}
-		c.Inbox <- strings.TrimRight(msg, "\n")
+		msg = strings.TrimRight(msg, "\n")
+		c.Inbox <- msg
 	}
 }
 
 func (c *Client) Send() error {
-	stdinScanner := bufio.NewScanner(os.Stdin)
-	if stdinScanner.Scan() {
-		line := stdinScanner.Text()
-		_, err := c.Connection.Write([]byte(line + "\n"))
+	reader := bufio.NewReader(os.Stdin)
+	line, err := reader.ReadString('\n')
+	if err != nil {
 		return err
 	}
-	return stdinScanner.Err()
+	line = strings.TrimRight(line, "\n")
+	_, err = c.Connection.Write([]byte(line + "\n"))
+	coloredLine := color.GreenString(c.Username+"(you): ") + line
+	fmt.Print("\033[A\r\033[K" + coloredLine + "\n")
+	return err
 }
 
 func (c *Client) Read() {
 	for msg := range c.Inbox {
-		println(msg)
+		fmt.Println(msg)
 	}
 }
